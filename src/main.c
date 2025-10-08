@@ -32,35 +32,67 @@
 #define flashing_delay 800000
 //
 
-//GPIO Values for each LED driving MOSFET
-#define red 0x01
-#define blue 0x02
-#define green 0x10
-#define yellow 0x20
-//
-
-#define mode_amount 0x11
+#define mode_amount 17
+#define loop_amount 4
 
 #include <xc.h>
 
 void Blink(uint8_t LED1, uint8_t LED2, uint8_t flash);
 
-uint8_t mode = 0x00;
-uint8_t x = 0;  // For loops
-uint8_t button_used = 0x00; // Disable all loops
+// Enumerations
+enum LEDs {
+    OFF = 0x00,
+    RED = 0x01,
+    BLUE = 0x02,
+    GREEN = 0x10,
+    YELLOW = 0x20
+};
 
-void interrupt Change_Mode() {   // Change mode interrupt
+enum LED_Modes {
+    RG_BLINK_BY,
+    RB_BLINK_GY,
+    RY_BLINK_GB,
+    R_STATIC,
+    G_STATIC,
+    B_STATIC,
+    Y_STATIC,
+    RG_FLASH_RG_BLINK_BY,
+    RB_FLASH_RB_BLINK_GY,
+    RY_FLASH_RY_BLINK_GB,
+    BY_FLASH_RG_BLINK_BY,
+    GY_FLASH_RB_BLINK_GY,
+    GB_FLASH_RY_BLINK_GB,
+    ALL_BLINK,
+    ALL_FLASH,
+    ALL_FLASH_ALL_BLINK,
+    ALL_STATIC,
+    ALL_OFF
+};
+
+enum Blink_Mode {
+    BLINK,
+    FLASH
+};
+//
+
+uint8_t mode = 0x00;        // Mode number
+uint8_t x = 0;              // For loops
+uint8_t button_used = 0x00;
+
+void interrupt Change_Mode() // Change mode interrupt
+{   
     if(mode < mode_amount) {
         mode++;
     }
     else {
         mode = 0x0;
     }
-    button_used = 0x04;
+    button_used = loop_amount;  // Stop all ongoing loops instantly to change mode
     INTCON = 0x90;
 }
 
-void main(void) {
+void main(void) 
+{
     OSCCON = 0x71;
     ANSEL = 0x00;
     TRISIO = 0x0C;
@@ -68,113 +100,114 @@ void main(void) {
     OPTION_REG = 0x40 | OPTION_REG;
     while(1) {
         switch(mode) {
-            case 0x00:   // Blink between red, green and blue, yellow LEDs
-                Blink(red | green, blue | yellow, 0x00);
+            case RG_BLINK_BY:   // Blink between red, green and blue, yellow LEDs
+                Blink(RED | GREEN, BLUE | YELLOW, BLINK);
             break;
-            case 0x01:   // Blink between red, blue and green, yellow LEDs
-                Blink(red | blue, green | yellow, 0x00);
+            case RB_BLINK_GY:   // Blink between red, blue and green, yellow LEDs
+                Blink(RED | BLUE, GREEN | YELLOW, BLINK);
             break;
-            case 0x02:   // Blink between red, yellow and green, blue LEDs
-                Blink(red | yellow, green | blue, 0x00);
+            case RY_BLINK_GB:   // Blink between red, yellow and green, blue LEDs
+                Blink(RED | YELLOW, GREEN | BLUE, BLINK);
             break;
-            case 0x03:   // Static red
-                GPIO = red;
+            case R_STATIC:   // Static red
+                GPIO = RED;
             break;
-            case 0x04:   // Static green
-                GPIO = green;
+            case G_STATIC:   // Static green
+                GPIO = GREEN;
             break;
-            case 0x05:   // Static blue
-                GPIO = blue;
+            case B_STATIC:   // Static blue
+                GPIO = BLUE;
             break;
-            case 0x06:   // Static yellow
-                GPIO = yellow;
+            case Y_STATIC:   // Static yellow
+                GPIO = YELLOW;
             break;
-            case 0x07:   // Flashing red, green then repeat case 0x00 four times
-                for(x = 0; x < (8 - (button_used + 4)); x++) {
-                    Blink(red | green, 0x00, 0x01);
+            case RG_FLASH_RG_BLINK_BY:   // Flashing red, green then repeat case RG_BLINK_BY four times
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(RED | GREEN, OFF, FLASH);
                 }
-                for(x = 0; x < (4 - button_used); x++) {
-                    Blink(red | green, blue | yellow, 0x00);
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(RED | GREEN, BLUE | YELLOW, BLINK);
                 }       
             break;
-            case 0x08:   // Flashing red, blue then repeat case 0x01 four times
-                for(x = 0; x < (8 - (button_used + 4)); x++) {
-                    Blink(red | blue, 0x00, 0x01);
+            case RB_FLASH_RB_BLINK_GY:   // Flashing red, blue then repeat case RB_BLINK_GY four times
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(RED | BLUE, OFF, FLASH);
                 }
-                for(x = 0; x < (4 - button_used); x++) {
-                    Blink(red | blue, green | yellow, 0x00);
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(RED | BLUE, GREEN | YELLOW, BLINK);
                 }                
             break;
-            case 0x09:   // Flashing red, yellow then repeat case 0x02 four times
-                for(x = 0; x < (8 - (button_used + 4)); x++) {
-                    Blink(red | yellow, 0x00, 0x01);
+            case RY_FLASH_RY_BLINK_GB:   // Flashing red, yellow then repeat case RY_BLINK_GB four times
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(RED | YELLOW, OFF, FLASH);
                 }
-                for(x = 0; x < (4 - button_used); x++) {
-                    Blink(red | yellow, green | blue, 0x00);
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(RED | YELLOW, GREEN | BLUE, BLINK);
                 }                
             break;
-            case 0x0A:   // Flashing blue, yellow then repeat case 0x00 four times
-                for(x = 0; x < (8 - (button_used + 4)); x++) {
-                    Blink(blue | yellow, 0x00, 0x01);
+            case BY_FLASH_RG_BLINK_BY:   // Flashing blue, yellow then repeat case RG_BLINK_BY four times
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(BLUE | YELLOW, OFF, FLASH);
                 }
-                for(x = 0; x < (4 - button_used); x++) {
-                    Blink(red | green, blue | yellow, 0x00);
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(RED | GREEN, BLUE | YELLOW, BLINK);
                 }  
             break;
-            case 0x0B:   // Flashing green, yellow then repeat case 0x01 four times
-                for(x = 0; x < (8 - (button_used + 4)); x++) {
-                    Blink(green | yellow, 0x00, 0x01);
+            case GY_FLASH_RB_BLINK_GY:   // Flashing green, yellow then repeat case RB_BLINK_GY four times
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(GREEN | YELLOW, OFF, FLASH);
                 }
-                for(x = 0; x < (4 - button_used); x++) {
-                    Blink(red | blue, green | yellow, 0x00);
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(RED | BLUE, GREEN | YELLOW, BLINK);
                 }  
             break;
-            case 0x0C:   // Flashing green, blue then repeat case 0x02 four times
-                for(x = 0; x < (8 - (button_used + 4)); x++) {
-                    Blink(green | blue, 0x00, 0x01);
+            case GB_FLASH_RY_BLINK_GB:   // Flashing green, blue then repeat case RY_BLINK_GB four times
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(GREEN | BLUE, OFF, FLASH);
                 }
-                for(x = 0; x < (4 - button_used); x++) {
-                    Blink(red | yellow, green | blue, 0x00);
-                }
-            break;
-            case 0x0D:   // Blink all LEDs
-                Blink(red | green | blue | yellow, 0x00, 0x00);
-            break;
-            case 0x0E:   // Flash all LEDs
-                Blink(red | green | blue | yellow, 0x00, 0x01);
-            break;
-            case 0x0F:   // Flash then blink all LEDs
-                for(x = 0; x < (8 - (button_used + 4)); x++) {
-                    Blink(red | green | blue | yellow, 0x00, 0x01);
-                }
-                for(x = 0; x < (4 - button_used); x++) {
-                    Blink(red | green | blue | yellow, 0x00, 0x00);
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(RED | YELLOW, GREEN | BLUE, BLINK);
                 }
             break;
-            case 0x10:   // Static all LEDs
-                GPIO = red | green| blue | yellow;
+            case ALL_BLINK:   // Blink all LEDs
+                Blink(RED | GREEN | BLUE | YELLOW, OFF, BLINK);
             break;
-            case 0x11:  // Lights off
-                GPIO = 0x00;
+            case ALL_FLASH:   // Flash all LEDs
+                Blink(RED | GREEN | BLUE | YELLOW, OFF, FLASH);
+            break;
+            case ALL_FLASH_ALL_BLINK:   // Flash then blink all LEDs
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(RED | GREEN | BLUE | YELLOW, OFF, FLASH);
+                }
+                for(x = 0; x < (loop_amount - button_used); x++) {
+                    Blink(RED | GREEN | BLUE | YELLOW, OFF, BLINK);
+                }
+            break;
+            case ALL_STATIC:   // Static all LEDs
+                GPIO = RED | GREEN| BLUE | YELLOW;
+            break;
+            case ALL_OFF:  // Lights off
+                GPIO = OFF;
             break;
         }
-        button_used = 0x00; // Re-enable mode changing button
+        button_used = 0x00; // Re-enable flashing and blinking loops
     }  
     return;
 }
 
-void Blink(uint8_t LED1, uint8_t LED2, uint8_t flash) {
+void Blink(uint8_t LED1, uint8_t LED2, uint8_t flash) 
+{
     switch(flash) {
-        case 0x00:
+        case BLINK:
             GPIO = LED1; 
             _delay(switching_delay);
             GPIO = LED2;
             _delay(switching_delay);
         break;
-        case 0x01:
+        case FLASH:
             GPIO = LED1 | LED2; 
             _delay(flashing_delay);
-            GPIO = 0x00;
+            GPIO = OFF;
             _delay(flashing_delay);
         break;
     }
