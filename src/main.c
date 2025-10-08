@@ -85,7 +85,7 @@ void interrupt Change_Mode() // Change mode interrupt
         mode++;
     }
     else {
-        mode = 0x0;
+        mode = 0x00;
     }
     button_used = loop_amount;  // Stop all ongoing loops instantly to change mode
     INTCON = 0x90;
