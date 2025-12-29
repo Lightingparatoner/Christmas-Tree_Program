@@ -79,7 +79,7 @@ uint8_t mode = 0x00;        // Mode number
 uint8_t x = 0;              // For loops
 uint8_t button_used = 0x00;
 
-void interrupt Change_Mode() // Change mode interrupt
+void __interrupt() Change_Mode(void) // Change mode interrupt
 {   
     if(mode < mode_amount) {
         mode++;
